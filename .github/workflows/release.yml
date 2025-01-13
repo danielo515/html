@@ -9,10 +9,19 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
     if: ${{ github.actor != 'dependabot[bot]' }}
+
+    environment:
+      name: Npm
+      url: https://www.npmjs.com/package/@kitajs/html
 
     steps:
       - name: Checkout
@@ -23,7 +32,7 @@ jobs:
         run: git fetch --prune --unshallow --tags
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
 
       - name: Setup node and restore cached dependencies
         uses: actions/setup-node@v4
@@ -54,3 +63,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

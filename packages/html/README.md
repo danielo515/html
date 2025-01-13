@@ -9,14 +9,15 @@
 <br />
 
 <p align="center" >
-  <a href="https://kita.js.org" target="_blank" rel="noopener noreferrer">
-    <img src="https://kita.js.org/logo.png" width="180" alt="Kita JS logo" />
+  <a href="https://kitajs.org" target="_blank" rel="noopener noreferrer">
+    <img src="https://kitajs.org/logo.png" width="180" alt="Kita JS logo" />
   </a>
 </p>
 
 <br />
 
 <div align="center">
+  <a href="https://kitajs.org/discord"><img src="https://img.shields.io/discord/1216165027774595112?logo=discord&logoColor=white&color=%237289da" alt="Discord"></a>
   <a title="MIT license" target="_blank" href="https://github.com/kitajs/html/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/kitajs/html"></a>
   <a title="Codecov" target="_blank" href="https://app.codecov.io/gh/kitajs/html"><img alt="Codecov" src="https://img.shields.io/codecov/c/github/kitajs/html?token=ML0KGCU0VM"></a>
   <a title="NPM Package" target="_blank" href="https://www.npmjs.com/package/@kitajs/html"><img alt="Downloads" src="https://img.shields.io/npm/dw/@kitajs/html?style=flat"></a>
@@ -32,7 +33,7 @@
 
 <p align="center">
   <code>@kitajs/html</code> is a <a href="#performance">super fast</a> JSX runtime to generate HTML strings that works everywhere. 
-   <br /><i><a href="https://expressjs.com">Express</a>? <a href="https://fastify.dev">Fastify</a>? <a href="https://hono.dev">Hono</a>? <a href="https://bun.sh">Bun</a>? <a href="https://htmx.org/">Htmx</a>?</i>
+   <br /><i><a href="https://adonisjs.com">AdonisJS</a>? <a href="https://expressjs.com">Express</a>? <a href="https://fastify.dev">Fastify</a>? <a href="https://hono.dev">Hono</a>? <a href="https://bun.sh">Bun</a>? <a href="https://htmx.org/">Htmx</a>?</i>
    <br /><br /><b>If your code works with strings, we got you covered.</b>
   <br />
   <br />
@@ -57,8 +58,6 @@
   - [Alpinejs](#alpinejs)
   - [Hotwire Turbo](#hotwire-turbo)
   - [Base HTML templates](#base-html-templates)
-- [Compiling HTML](#compiling-html)
-  - [Clean Components](#clean-components)
 - [Fragments](#fragments)
 - [Supported HTML](#supported-html)
   - [The `tag` tag](#the-tag-tag)
@@ -70,6 +69,7 @@
 - [Serialization table](#serialization-table)
 - [Format HTML output](#format-html-output)
 - [Deprecating global register](#deprecating-global-register)
+- [Deprecating importing type extensions](#deprecating-importing-type-extensions)
 - [Fork credits](#fork-credits)
 
 <br />
@@ -367,7 +367,7 @@ const html = renderToStream(renderUserPage);
 
 > [!NOTE]  
 > The `renderToStream()` is returns a native node/bun stream, head over to our
-> [suspense-server](examples/suspense-server.tsx) example to see how to use it with
+> [suspense-server](./examples/suspense-server.tsx) example to see how to use it with
 > node:http, Express or Fastify servers.
 
 <br />
@@ -742,93 +742,6 @@ const html = (
 
 <br />
 
-## Compiling HTML
-
-`Html.compile` interface compiles a [clean component](#clean-components) into a super fast
-component. This does not support unclean components / props processing.
-
-<br />
-
-> [!WARNING]  
-> This feature is a special use case for rendering **entire page templates** like what you
-> would do with handlebars or nunjucks.
->
-> It does not works with mostly JSX components and, for small components,
-> [it will be slower than the normal](benchmark.md) JSX syntax.
-
-<br />
-
-This mode works just like prepared statements in SQL. Compiled components can give up to
-[**2000**](#performance) times faster html generation. This is a opt-in feature that you
-may not be able to use everywhere!
-
-Due to the nature of
-[`Proxy`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)
-objects, the spread operator (`...`) will not work with compiled components. You need to
-manually pass all props to their components.
-
-```tsx
-import Html from '@kitajs/html';
-
-function Component(props: Html.PropsWithChildren<{ name: string }>) {
-  return <div>Hello {props.name}</div>;
-}
-
-const compiled = Html.compile<typeof Component>(Component);
-
-compiled({ name: 'World' });
-// <div>Hello World</div>
-
-const compiled = Html.compile((p) => <div>Hello {p.name}</div>);
-
-compiled({ name: 'World' });
-// <div>Hello World</div>
-```
-
-Properties passed for compiled components **ARE NOT** what will be passed as argument to
-the generated function.
-
-```tsx
-const compiled = Html.compile((t) => {
-  // THIS WILL NOT print 123, but a string used by .compile instead
-  console.log(t.asd);
-  return <div></div>;
-});
-
-compiled({ asd: 123 });
-```
-
-That's the reason on why you cannot compile unclean components, as they need to process
-the props before rendering.
-
-<br />
-
-### Clean Components
-
-A **clean component** is a component that does not process props before applying them to
-the element. This means that the props are applied to the element as is, and you need to
-process them before passing them to the component.
-
-```tsx
-// Clean component, render as is
-function Clean(props: PropsWithChildren<{ sum: number }>) {
-  return <div>{props.sum}</div>;
-}
-
-// Calculation is done before passing to the component
-html = <Clean sum={3 * 2} />;
-
-// Unclean component, process before render
-function Unclean(props: { a: number; b: number }) {
-  return <div>{props.a * props.b}</div>;
-}
-
-// Calculation is done inside the component, thus cannot be used with .compile()
-html = <Unclean a={3} b={2} />;
-```
-
-<br />
-
 ## Fragments
 
 JSX does not allow multiple root elements, but you can use a fragment to group multiple
@@ -1107,8 +1020,8 @@ console.log(prettify(html));
 
 ## Deprecating global register
 
-The `@kitajs/html/register` import has been deprecated and will be removed in the next
-major version. Please change the way you have configured your project to use this library.
+The `@kitajs/html/register` in favour of the `react-jsx` target `@kitajs/html` supports,
+which automatically registers the JSX runtime globally.
 
 Please update your tsconfig to use the new `jsxImportSource` option and remove all
 references to `'@kitajs/html/register'` from your codebase.
@@ -1131,6 +1044,33 @@ codebase.
 
 ```diff
 - import { Html } from '@kitajs/html';
+```
+
+<br />
+
+## Deprecating importing type extensions
+
+Importing type extensions like `import '@kitajs/html/htmx'` and
+`import '@kitajs/html/alpine'` have been deprecated and will be removed in the next major
+version.
+
+Please change the way you import them to either use `/// <reference types="..." />`
+[triple slash directive](https://www.typescriptlang.org/docs/handbook/triple-slash-directives.html)
+or the [`types`](https://www.typescriptlang.org/tsconfig/#types) option in your tsconfig.
+
+```diff
+- import '@kitajs/html/htmx';
++ /// <reference types="@kitajs/html/htmx" />
+```
+
+**Or** add them in the `types` option present in your tsconfig:
+
+```diff
+{
+  "compilerOptions": {
++   "types": ["@kitajs/html/htmx"]
+  }
+}
 ```
 
 <br />

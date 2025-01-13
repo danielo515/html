@@ -48,6 +48,15 @@ describe('Attributes', () => {
     assert.equal('<form novalidate></form>', <form novalidate></form>);
   });
 
+  test('Undefined', () => {
+    assert.equal(
+      '<div></div>',
+      <div hidden={undefined} translate={undefined}>
+        {undefined}
+      </div>
+    );
+  });
+
   test('Dates & Objects', () => {
     const date = new Date();
     assert.equal(<del datetime={date} />, `<del datetime="${date.toISOString()}"></del>`);
@@ -55,12 +64,21 @@ describe('Attributes', () => {
     assert.equal(<div test={{}}></div>, '<div test="[object Object]"></div>');
   });
 
+  test('Popover', () => {
+    assert.equal('<div popover="auto"></div>', <div popover="auto"></div>);
+    assert.equal('<div popover="manual"></div>', <div popover="manual"></div>);
+
+    assert.equal('<div popover></div>', <div popover></div>);
+  });
+
   test('class arrays', () => {
     assert.equal(<div class="name" />, '<div class="name"></div>');
     assert.equal(<div class={['name']} />, '<div class="name"></div>');
+    //@ts-expect-error - This kind of expression is always falsy.
     assert.equal(<div class={['' && 'name']} />, '<div></div>');
 
     assert.equal(
+      //@ts-expect-error - This kind of expression is always falsy.
       <div class={[false && 'a', 'name', null && 'b', 0 && 'c']} />,
       '<div class="name"></div>'
     );

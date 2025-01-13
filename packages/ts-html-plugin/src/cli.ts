@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 import chalk from 'chalk';
-import fs from 'fs';
-import { EOL } from 'os';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import ts from 'typescript';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -13,7 +12,7 @@ const { version } = require('../package.json');
 
 const help = `
 
-ts-html-plugin v${version} - A CLI tool & TypeScript LSP for finding XSS vulnerabilities in your TypeScript code.
+@kitajs/ts-html-plugin v${version} - A CLI tool & TypeScript LSP for finding XSS vulnerabilities in your TypeScript code.
 
 Usage: xss-scan         [options] <file> <file>...
        ts-html-plugin   [options] <file> <file>...
@@ -35,7 +34,7 @@ Examples:
 Exit codes:
   0 - No XSS vulnerabilities were found
   1 - XSS vulnerabilities were found
-  2 - Only XSS warnings were found
+  2 - Only warnings were found
 
 `.trim();
 
@@ -43,7 +42,7 @@ function readCompilerOptions(tsconfigPath: string) {
   const { config, error } = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
 
   if (error) {
-    throw error;
+    return { errors: [error] };
   }
 
   const { options, errors, fileNames } = ts.parseJsonConfigFileContent(
@@ -70,7 +69,7 @@ function prettyPrintErrorCount(diagnostics: ts.Diagnostic[], root: string) {
       continue;
     }
 
-    const file = files.get(diagnostic.file.fileName)!;
+    const file = files.get(diagnostic.file.fileName);
 
     if (file !== undefined) {
       files.set(diagnostic.file.fileName, file + 1);
@@ -137,9 +136,10 @@ async function main() {
 
   const simplified = !!(args.simplified || args.s);
 
-  const diagnosticFormatter = simplified
-    ? ts.formatDiagnostics
-    : ts.formatDiagnosticsWithColorAndContext;
+  const diagnosticFormatter =
+    !process.stdout.isTTY || simplified
+      ? ts.formatDiagnostics
+      : ts.formatDiagnosticsWithColorAndContext;
 
   if (!fileExists(tsconfigPath)) {
     console.error((!simplified ? chalk.red : String)(`Could not find ${tsconfigPath}`));
@@ -149,9 +149,9 @@ async function main() {
   const tsconfig = readCompilerOptions(tsconfigPath);
 
   const diagnosticHost: ts.FormatDiagnosticsHost = {
-    getCurrentDirectory: () => root,
+    getCurrentDirectory: ts.sys.getCurrentDirectory,
     getCanonicalFileName: (fileName) => fileName,
-    getNewLine: () => EOL
+    getNewLine: () => ts.sys.newLine
   };
 
   if (tsconfig.errors) {
@@ -166,7 +166,7 @@ async function main() {
     files = [];
 
     for (let i = 0; i < args._.length; i++) {
-      let file = String(args._[i]);
+      const file = String(args._[i]);
 
       if (!fileExists(file)) {
         console.error(
@@ -189,7 +189,7 @@ async function main() {
   }
 
   if (!files.length) {
-    console.error((!simplified ? chalk.red : String)(`No files were found to check.`));
+    console.error((!simplified ? chalk.red : String)('No files were found to check.'));
     return process.exit(1);
   }
 
@@ -208,7 +208,7 @@ async function main() {
     }
 
     ts.forEachChild(source, function loopSourceNodes(node) {
-      recursiveDiagnoseJsxElements(ts as any, node, typeChecker, diagnostics);
+      recursiveDiagnoseJsxElements(ts, node, typeChecker, diagnostics);
     });
   }
 

@@ -4,14 +4,11 @@
   "commit": false,
   "fixed": [],
   "linked": [],
-  "access": "restricted",
+  "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",
-  "ignore": [
-    "@kitajs/bench-html-typed-html",
-    "@kitajs/bench-html-templates",
-    "@kitajs/bench-html-runner",
-    "@kitajs/bench-html-reactjsx",
-    "@kitajs/bench-html-kitajs"
-  ]
+  "ignore": ["@kitajs/bench-*"],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }

@@ -31,10 +31,22 @@ declare namespace JSX {
   interface HtmlTag extends ElementChildrenAttribute, IntrinsicAttributes {
     accesskey?: undefined | string;
     contenteditable?: undefined | string;
+    inputmode?:
+      | undefined
+      | 'none'
+      | 'text'
+      | 'decimal'
+      | 'numeric'
+      | 'tel'
+      | 'search'
+      | 'email'
+      | 'url'
+      | AnyString;
     dir?: undefined | string;
     hidden?: undefined | string | boolean;
     id?: undefined | number | string;
-    role?: undefined | string;
+    popover?: undefined | boolean | 'auto' | 'manual';
+    role?: undefined | AriaRole;
     lang?: undefined | string;
     draggable?: undefined | string | boolean;
     spellcheck?: undefined | string | boolean;
@@ -69,7 +81,7 @@ declare namespace JSX {
      *
      * @default false
      *
-     * @see https://github.com/kitajs/html#sanitization
+     * @see https://github.com/kitajs/html/tree/master/packages/html#sanitization
      */
     safe?: undefined | boolean;
 
@@ -230,7 +242,7 @@ declare namespace JSX {
   }
 
   interface HtmlFormTag extends HtmlTag {
-    ['accept-charset']?: undefined | string;
+    'accept-charset'?: undefined | string;
     action?: undefined | string;
     autocomplete?: undefined | string;
     enctype?: undefined | string;
@@ -242,6 +254,7 @@ declare namespace JSX {
 
   interface HtmlHtmlTag extends HtmlTag {
     manifest?: undefined | string;
+    xmlns?: string | string;
   }
 
   interface HtmlIFrameTag extends HtmlTag {
@@ -279,9 +292,9 @@ declare namespace JSX {
     ismap?: undefined | string;
     width?: undefined | number | string;
     height?: undefined | number | string;
-    decoding?: 'sync' | 'async' | 'auto' | AnyString;
-    loading?: 'eager' | 'lazy' | AnyString;
-    srcset?: string;
+    decoding?: undefined | 'sync' | 'async' | 'auto' | AnyString;
+    loading?: undefined | 'eager' | 'lazy' | AnyString;
+    srcset?: undefined | string;
   }
 
   interface HtmlInputTag extends HtmlTag {
@@ -359,7 +372,7 @@ declare namespace JSX {
   interface HtmlMetaTag extends HtmlTag {
     name?: undefined | string;
     property?: undefined | string;
-    ['http-equiv']?: undefined | string;
+    'http-equiv'?: undefined | string;
     content?: undefined | string;
     charset?: undefined | string;
   }
@@ -411,6 +424,8 @@ declare namespace JSX {
     value?: undefined | string;
   }
 
+  interface HtmlPictureTag extends HtmlTag {}
+
   interface HtmlProgressTag extends HtmlTag {
     value?: undefined | string | number;
     max?: undefined | string | number;
@@ -457,7 +472,7 @@ declare namespace JSX {
     onclose?: undefined | string;
   }
 
-  interface HtmlSelectTag extends HtmlTag {
+  interface HtmlSelectTag extends HtmlTag, FormEvents {
     autofocus?: undefined | boolean;
     disabled?: undefined | boolean;
     form?: undefined | string;
@@ -465,10 +480,12 @@ declare namespace JSX {
     name?: undefined | string;
     required?: undefined | boolean;
     size?: undefined | string;
+    autocomplete?: undefined | string;
   }
 
   interface HtmlSourceTag extends HtmlTag {
     src?: undefined | string;
+    srcset?: undefined | string;
     type?: undefined | string;
     media?: undefined | string;
   }
@@ -480,12 +497,23 @@ declare namespace JSX {
     scoped?: undefined | string;
   }
 
-  interface HtmlTableTag extends HtmlTag {}
+  interface HtmlTableTag extends HtmlTag {
+    align?: undefined | 'left' | 'center' | 'right';
+    /** @deprecated */
+    bgcolor?: undefined | string;
+    border?: undefined | number;
+    cellpadding?: undefined | number | string;
+    cellspacing?: undefined | number | string;
+    width?: undefined | number | string;
+  }
 
   interface HtmlTableDataCellTag extends HtmlTag {
+    align?: undefined | 'left' | 'center' | 'right';
     colspan?: undefined | string | number;
     rowspan?: undefined | string | number;
     headers?: undefined | string;
+    /** @deprecated */
+    valign?: undefined | 'top' | 'middle' | 'bottom' | 'baseline';
   }
 
   interface HtmlTextAreaTag extends HtmlTag {
@@ -509,6 +537,9 @@ declare namespace JSX {
     rowspan?: undefined | string | number;
     headers?: undefined | string;
     scope?: undefined | string;
+    /** @deprecated */
+    valign?: undefined | 'top' | 'middle' | 'bottom' | 'baseline';
+    width?: undefined | number | string;
   }
 
   interface HtmlTimeTag extends HtmlTag {
@@ -634,7 +665,9 @@ declare namespace JSX {
 
   interface HtmlEmbedTag extends MediaEvents {}
 
-  interface HtmlImageTag extends MediaEvents {}
+  interface HtmlImageTag extends MediaEvents {
+    border?: undefined | number;
+  }
 
   interface HtmlObjectTag extends MediaEvents {}
 
@@ -650,7 +683,7 @@ declare namespace JSX {
      *
      * @see https://github.com/reactjs/rfcs/pull/107
      */
-    key?: never;
+    key?: undefined | never;
   }
 
   interface ElementChildrenAttribute {
@@ -780,6 +813,7 @@ declare namespace JSX {
     param: HtmlParamTag;
     path: HtmlSvgTag;
     pattern: HtmlSvgTag;
+    picture: HtmlPictureTag;
     polygon: HtmlSvgTag;
     polyline: HtmlSvgTag;
     pre: HtmlTag;
@@ -835,3 +869,76 @@ declare namespace JSX {
     wbr: HtmlTag;
   }
 }
+
+// All the WAI-ARIA 1.1 role attribute values from https://www.w3.org/TR/wai-aria-1.1/#role_definitions
+type AriaRole =
+  | 'alert'
+  | 'alertdialog'
+  | 'application'
+  | 'article'
+  | 'banner'
+  | 'button'
+  | 'cell'
+  | 'checkbox'
+  | 'columnheader'
+  | 'combobox'
+  | 'complementary'
+  | 'contentinfo'
+  | 'definition'
+  | 'dialog'
+  | 'directory'
+  | 'document'
+  | 'feed'
+  | 'figure'
+  | 'form'
+  | 'grid'
+  | 'gridcell'
+  | 'group'
+  | 'heading'
+  | 'img'
+  | 'link'
+  | 'list'
+  | 'listbox'
+  | 'listitem'
+  | 'log'
+  | 'main'
+  | 'marquee'
+  | 'math'
+  | 'menu'
+  | 'menubar'
+  | 'menuitem'
+  | 'menuitemcheckbox'
+  | 'menuitemradio'
+  | 'navigation'
+  | 'none'
+  | 'note'
+  | 'option'
+  | 'presentation'
+  | 'progressbar'
+  | 'radio'
+  | 'radiogroup'
+  | 'region'
+  | 'row'
+  | 'rowgroup'
+  | 'rowheader'
+  | 'scrollbar'
+  | 'search'
+  | 'searchbox'
+  | 'separator'
+  | 'slider'
+  | 'spinbutton'
+  | 'status'
+  | 'switch'
+  | 'tab'
+  | 'table'
+  | 'tablist'
+  | 'tabpanel'
+  | 'term'
+  | 'textbox'
+  | 'timer'
+  | 'toolbar'
+  | 'tooltip'
+  | 'tree'
+  | 'treegrid'
+  | 'treeitem'
+  | (string & {});

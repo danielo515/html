@@ -3,13 +3,11 @@ import type { Children } from '.';
 /** A component that adds an error boundary to catch any inner promise rejection. */
 export function ErrorBoundary(props: ErrorBoundaryProps): JSX.Element;
 
-/**
- * Checks if the error is a timeout error thrown by the ErrorBoundary's `timeout`
- * property.
- *
- * @param error The error to check.
- */
-export function isTimeoutError(error: unknown): error is Error & { message: 'timeout' };
+/** An error thrown by the ErrorBoundary's `timeout` property. */
+export class HtmlTimeout extends Error {
+  /** Throws the error. */
+  static reject(): never;
+}
 
 /**
  * The props for the `ErrorBoundary` component.
@@ -25,6 +23,8 @@ export interface ErrorBoundaryProps {
    *
    * The error will be string `timeout` if the rejection was caused by the `timeout`
    * property.
+   *
+   * If the timeout gets triggered, it will throw an {@linkcode HtmlTimeout} error.
    */
   catch: JSX.Element | ((error: unknown) => JSX.Element);
 
@@ -33,4 +33,10 @@ export interface ErrorBoundaryProps {
    * timeout. Use `undefined` or `0` to disable the timeout.
    */
   timeout?: number;
+
+  /**
+   * The error class we should throw if the timeout gets triggered. Defaults to
+   * {@linkcode HtmlTimeout}
+   */
+  error?: { reject(): never };
 }

@@ -264,6 +264,10 @@ function attributesToString(attributes) {
     // @ts-expect-error - this indexing is safe.
     value = attributes[key];
 
+    if (value === null || value === undefined) {
+      continue;
+    }
+
     // React className compatibility.
     if (key === 'className') {
       // @ts-expect-error - both were provided, so use the class attribute.
@@ -314,10 +318,6 @@ function attributesToString(attributes) {
         result += ' ' + key;
       }
 
-      continue;
-    }
-
-    if (value === null || value === undefined) {
       continue;
     }
 
@@ -381,14 +381,17 @@ function contentsToString(contents, escape) {
   let result = '';
 
   for (let index = 0; index < length; index++) {
-    let content = contents[index];
+    const content = contents[index];
 
     switch (typeof content) {
       case 'string':
       case 'number':
-      case 'boolean':
+      // Bigint is the only case where it differs from React.
+      // where React renders a empty string and we render the whole number.
       case 'bigint':
         result += content;
+        continue;
+      case 'boolean':
         continue;
     }
 
@@ -402,11 +405,15 @@ function contentsToString(contents, escape) {
       continue;
     }
 
-    // @ts-ignore - Type instantiation is excessively deep and possibly infinite.
-    return Promise.all(contents.slice(index)).then(function resolveContents(resolved) {
-      resolved.unshift(result);
-      return contentsToString(resolved, escape);
-    });
+    if (typeof content.then === 'function') {
+      // @ts-ignore - Type instantiation is excessively deep and possibly infinite.
+      return Promise.all(contents.slice(index)).then(function resolveContents(resolved) {
+        resolved.unshift(result);
+        return contentsToString(resolved, escape);
+      });
+    }
+
+    throw new Error('Objects are not valid as a KitaJSX child');
   }
 
   // escapeHtml is faster with longer strings, that's
@@ -427,11 +434,13 @@ function contentToString(content, safe) {
   switch (typeof content) {
     case 'string':
       return safe ? escapeHtml(content) : content;
-
     case 'number':
-    case 'boolean':
+    // Bigint is the only case where it differs from React.
+    // where React renders a empty string and we render the whole number.
     case 'bigint':
       return content.toString();
+    case 'boolean':
+      return '';
   }
 
   if (!content) {
@@ -442,9 +451,13 @@ function contentToString(content, safe) {
     return contentsToString(content, safe);
   }
 
-  return content.then(function resolveContent(resolved) {
-    return contentToString(resolved, safe);
-  });
+  if (typeof content.then === 'function') {
+    return content.then(function resolveContent(resolved) {
+      return contentToString(resolved, safe);
+    });
+  }
+
+  throw new Error('Objects are not valid as a KitaJSX child');
 }
 
 /**
@@ -462,17 +475,16 @@ function createElement(name, attrs, ...children) {
     // We at least need to pass the children to the function component. We may receive null if this
     // component was called without any children.
     if (!hasAttrs) {
-      attrs = { children: children.length > 1 ? children : children[0] };
-    } else if (attrs.children === undefined) {
-      attrs.children = children.length > 1 ? children : children[0];
+      return name({ children: children.length > 1 ? children : children[0] });
     }
 
+    attrs.children = children.length > 1 ? children : children[0];
     return name(attrs);
   }
 
   // Switches the tag name when this custom `tag` is present.
   if (hasAttrs && name === 'tag') {
-    name = String(attrs.of);
+    name = /** @type {string} */ (attrs.of);
   }
 
   const attributes = hasAttrs ? attributesToString(attrs) : '';
@@ -485,139 +497,32 @@ function createElement(name, attrs, ...children) {
 
   const contents = contentsToString(children, hasAttrs && attrs.safe);
 
-  if (contents instanceof Promise) {
-    return contents.then(function resolveContents(child) {
-      return '<' + name + attributes + '>' + child + '</' + name + '>';
-    });
+  if (typeof contents === 'string') {
+    return '<' + name + attributes + '>' + contents + '</' + name + '>';
   }
 
-  return '<' + name + attributes + '>' + contents + '</' + name + '>';
+  return contents.then(function resolveContents(contents) {
+    return '<' + name + attributes + '>' + contents + '</' + name + '>';
+  });
 }
 
 /** @type {import('.').Fragment} */
 function Fragment(props) {
-  return Html.contentsToString([props.children]);
+  return contentsToString([props.children]);
 }
 
-/**
- * Just to stop TS from complaining about the type.
- *
- * @type {import('.').compile}
- * @returns {Function}
- */
-function compile(htmlFn, strict = true, separator = '/*\x00*/') {
-  if (typeof htmlFn !== 'function') {
-    throw new Error('The first argument must be a function.');
-  }
-
-  const properties = new Set();
-
-  const html = htmlFn(
-    // @ts-expect-error - this proxy will meet the props with children requirements.
-    new Proxy(
-      {},
-      {
-        get(_, name) {
-          // Adds the property to the set of known properties.
-          properties.add(name);
-
-          const isChildren = name === 'children';
-          let access = `args[${separator}\`${name.toString()}\`${separator}]`;
-
-          // Adds support to render multiple children
-          if (isChildren) {
-            access = `Array.isArray(${access}) ? ${access}.join(${separator}\`\`${separator}) : ${access}`;
-          }
-
-          // Uses ` to avoid content being escaped.
-          return `\`${separator} + (${access} || ${
-            strict && !isChildren
-              ? `throwPropertyNotFound(${separator}\`${name.toString()}\`${separator})`
-              : `${separator}\`\`${separator}`
-          }) + ${separator}\``;
-        }
-      }
-    )
-  );
-
-  if (typeof html !== 'string') {
-    throw new Error('You cannot use compile() with async components.');
-  }
-
-  const sepLength = separator.length;
-  const length = html.length;
-
-  // Adds the throwPropertyNotFound function if strict
-  let body = '';
-  let nextStart = 0;
-  let index = 0;
-
-  // Escapes every ` without separator
-  for (; index < length; index++) {
-    // Escapes the backtick character because it will be used to wrap the string
-    // in a template literal.
-    if (
-      html[index] === '`' &&
-      html.slice(index - sepLength, index) !== separator &&
-      html.slice(index + 1, index + sepLength + 1) !== separator
-    ) {
-      body += html.slice(nextStart, index) + '\\`';
-      nextStart = index + 1;
-      continue;
-    }
-  }
-
-  // Adds the remaining string
-  body += html.slice(nextStart);
-
-  if (strict) {
-    return Function(
-      'args',
-      // Checks for args presence
-      'if (args === undefined) { throw new Error("The arguments object was not provided.") };\n' +
-        // Function to throw when a property is not found
-        'function throwPropertyNotFound(name) { throw new Error("Property " + name + " was not provided.") };\n' +
-        // Concatenates the body
-        `return \`${body}\``
-    );
-  }
-
-  return Function(
-    'args',
-    // Adds a empty args object when it is not present
-    'if (args === undefined) { args = Object.create(null) };\n' + `return \`${body}\``
-  );
-}
-
-const Html = {
-  escape,
-  e: escape,
-  escapeHtml,
-  isVoidElement,
-  attributesToString,
-  toKebabCase,
-  isUpper,
-  styleToString,
-  createElement,
-  h: createElement,
-  contentsToString,
-  contentToString,
-  compile,
-  Fragment
-};
-
-/**
- * These export configurations enable JS and TS developers to consumer @kitajs/html in
- * whatever way best suits their needs. Some examples of supported import syntax
- * includes:
- *
- * - `const Html = require('@kitajs/html')`
- * - `const { Html } = require('@kitajs/html')`
- * - `import * as Fastify from '@kitajs/html'`
- * - `import { Html, TSC_definition } from '@kitajs/html'`
- * - `import Html from '@kitajs/html'`
- * - `import Html, { TSC_definition } from '@kitajs/html'`
- */
-module.exports = Html;
-module.exports.Html = Html;
-module.exports.default = Html;
+exports.escape = escape;
+exports.e = escape;
+exports.escapeHtml = escapeHtml;
+exports.isVoidElement = isVoidElement;
+exports.attributesToString = attributesToString;
+exports.toKebabCase = toKebabCase;
+exports.isUpper = isUpper;
+exports.styleToString = styleToString;
+exports.createElement = createElement;
+exports.h = createElement;
+exports.contentsToString = contentsToString;
+exports.contentToString = contentToString;
+exports.Fragment = Fragment;
+//@ts-expect-error - global augmentation
+exports.Html = { ...exports };

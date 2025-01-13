@@ -2,7 +2,7 @@
   "name": "@kitajs/html-monorepo",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://kita.js.org",
+  "homepage": "https://kitajs.org",
   "bugs": {
     "url": "https://github.com/kitajs/html/issues"
   },
@@ -12,15 +12,11 @@
   },
   "license": "MIT",
   "author": "Arthur Fiorette <kita@arthur.place>",
-  "workspaces": [
-    "packages/*",
-    "benchmarks/*"
-  ],
   "scripts": {
     "bench": "pnpm -r --filter \"@kitajs/bench-html-*\" build && pnpm --filter \"@kitajs/bench-html-runner\" start",
     "build": "pnpm -r --aggregate-output build",
     "change": "changeset",
-    "ci:publish": "pnpm publish -r --access public && changeset tag",
+    "ci:publish": "pnpm publish -r --access public --provenance && changeset tag",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
     "format": "prettier --write .",
     "preinstall": "npx only-allow pnpm",
@@ -31,15 +27,15 @@
   "devDependencies": {
     "@arthurfiorette/prettier-config": "^1.0.12",
     "@changesets/changelog-github": "^0.5.0",
-    "@changesets/cli": "^2.27.1",
+    "@changesets/cli": "^2.27.11",
     "@kitajs/html": "workspace:*",
-    "husky": "^9.0.11",
-    "prettier": "^3.2.5",
-    "typescript": "^5.4.2"
+    "husky": "^9.1.7",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
   },
-  "packageManager": "pnpm@8.14.0",
+  "packageManager": "pnpm@9.1.1",
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=8.8.0"
+    "node": ">=20.13",
+    "pnpm": ">=9"
   }
 }
